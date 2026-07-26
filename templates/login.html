@@ -1,3 +1,4 @@
+<!-- templates/login.html -->
 {% extends "base.html" %}
 
 {% block title %}Login - FlaxTube{% endblock %}
@@ -23,15 +24,16 @@
 <script>
 document.getElementById('login-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
     const status = document.getElementById('auth-status');
     
     try {
         const response = await fetch('/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ username, password })
         });
         
         if (response.ok) {
@@ -41,7 +43,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
             status.innerHTML = `<div class="error">${error.error?.message || 'Login failed'}</div>`;
         }
     } catch (error) {
-        status.innerHTML = `<div class="error">Login failed</div>`;
+        status.innerHTML = `<div class="error">Login failed: ${error.message}</div>`;
     }
 });
 </script>
