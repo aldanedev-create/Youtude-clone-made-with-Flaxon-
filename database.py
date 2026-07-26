@@ -1,4 +1,3 @@
-# database.py
 import sqlite3
 import hashlib
 import secrets
@@ -10,6 +9,8 @@ DB_PATH = Path("youtube.db")
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # Enable foreign key constraints in SQLite
+    conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 def init_db():
@@ -36,7 +37,7 @@ def init_db():
             views INTEGER DEFAULT 0,
             likes INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     """)
 
@@ -48,8 +49,8 @@ def init_db():
             username TEXT NOT NULL,
             text TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (video_id) REFERENCES videos (id),
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (video_id) REFERENCES videos (id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     """)
 
@@ -65,8 +66,8 @@ def init_likes_table():
             video_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (video_id) REFERENCES videos (id),
-            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (video_id) REFERENCES videos (id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             UNIQUE(video_id, user_id)
         )
     """)
@@ -83,17 +84,36 @@ def init_all():
 # ============================================================
 init_all()
 
+# ============================================================
+# Security & Password Utilities (PBKDF2)
+# ============================================================
+
 def hash_password(password):
     salt = secrets.token_hex(16)
-    hash_value = hashlib.sha256((salt + password).encode()).hexdigest()
-    return f"{salt}${hash_value}"
+    key = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt.encode('utf-8'),
+        100000
+    )
+    return f"{salt}${key.hex()}"
 
 def verify_password(password, hashed):
     try:
-        salt, hash_value = hashed.split("$")
-        return hashlib.sha256((salt + password).encode()).hexdigest() == hash_value
-    except ValueError:
+        salt, key_hex = hashed.split("$")
+        computed_key = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            salt.encode('utf-8'),
+            100000
+        )
+        return secrets.compare_digest(computed_key.hex(), key_hex)
+    except (ValueError, TypeError):
         return False
+
+# ============================================================
+# User Queries
+# ============================================================
 
 def create_user(username, email, password):
     conn = get_db()
@@ -106,11 +126,11 @@ def create_user(username, email, password):
         )
         conn.commit()
         user_id = cursor.lastrowid
-        conn.close()
         return user_id
     except sqlite3.IntegrityError:
-        conn.close()
         return None
+    finally:
+        conn.close()
 
 def get_user(username, password):
     conn = get_db()
@@ -129,6 +149,10 @@ def get_user_by_id(user_id):
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
+
+# ============================================================
+# Video Queries
+# ============================================================
 
 def create_video(user_id, title, description, filename):
     conn = get_db()
@@ -178,12 +202,13 @@ def increment_views(video_id):
 def toggle_like(video_id, user_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM likes WHERE video_id = ? AND user_id = ?", (video_id, user_id))
+    
+    cursor.execute("SELECT id FROM likes WHERE video_id = ? AND user_id = ?", (video_id, user_id))
     existing = cursor.fetchone()
     
     if existing:
         cursor.execute("DELETE FROM likes WHERE video_id = ? AND user_id = ?", (video_id, user_id))
-        cursor.execute("UPDATE videos SET likes = likes - 1 WHERE id = ?", (video_id,))
+        cursor.execute("UPDATE videos SET likes = MAX(0, likes - 1) WHERE id = ?", (video_id,))
         liked = False
     else:
         cursor.execute("INSERT INTO likes (video_id, user_id) VALUES (?, ?)", (video_id, user_id))
@@ -201,6 +226,10 @@ def get_like_count(video_id):
     count = cursor.fetchone()
     conn.close()
     return count[0] if count else 0
+
+# ============================================================
+# Comment Queries
+# ============================================================
 
 def get_comments(video_id):
     conn = get_db()
@@ -224,4 +253,4 @@ def add_comment(video_id, user_id, username, text):
     cursor.execute("SELECT * FROM comments WHERE id = ?", (comment_id,))
     comment = cursor.fetchone()
     conn.close()
-    return dict(comment)
+    return dict(comment) if comment else None
