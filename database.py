@@ -73,6 +73,16 @@ def init_likes_table():
     conn.commit()
     conn.close()
 
+def init_all():
+    init_db()
+    init_likes_table()
+    print("✅ Database initialized successfully!")
+
+# ============================================================
+# AUTO-INIT: This runs when the module is imported
+# ============================================================
+init_all()
+
 def hash_password(password):
     salt = secrets.token_hex(16)
     hash_value = hashlib.sha256((salt + password).encode()).hexdigest()
@@ -215,11 +225,3 @@ def add_comment(video_id, user_id, username, text):
     comment = cursor.fetchone()
     conn.close()
     return dict(comment)
-
-def init_all():
-    init_db()
-    init_likes_table()
-
-if __name__ == "__main__":
-    init_all()
-    print("Database initialized successfully!")
