@@ -58,7 +58,6 @@ class SignupSchema(Schema):
     username = StrField(required=True, min_length=3, max_length=30)
     email = StrField(required=True, max_length=100)
     password = StrField(required=True, min_length=6, max_length=100)
-    confirm_password = StrField(required=True, min_length=6, max_length=100)
 
 class LoginSchema(Schema):
     username = StrField(required=True)
@@ -178,26 +177,20 @@ async def list_videos():
     return {"videos": db.get_all_videos()}
 
 # ============================================================
-# Routes - Auth (Handles both JSON and Form Data)
+# Routes - Auth
 # ============================================================
 
 @app.post("/signup")
 async def signup(request):
-    # Parse both JSON and form data
-    content_type = request.headers.get("content-type", "")
-    
-    if "application/json" in content_type:
+    try:
         data = await request.json()
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
-        confirm_password = data.get("confirm_password")
-    else:
-        form = await request.form()
-        username = form.get("username")
-        email = form.get("email")
-        password = form.get("password")
-        confirm_password = form.get("confirm_password")
+    except:
+        raise HTTPException(400, "Invalid JSON body")
+    
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
+    confirm_password = data.get("confirm_password", "")
     
     # Validation
     if not username or len(username) < 3:
@@ -225,17 +218,13 @@ async def signup(request):
 
 @app.post("/login")
 async def login(request):
-    # Parse both JSON and form data
-    content_type = request.headers.get("content-type", "")
-    
-    if "application/json" in content_type:
+    try:
         data = await request.json()
-        username = data.get("username")
-        password = data.get("password")
-    else:
-        form = await request.form()
-        username = form.get("username")
-        password = form.get("password")
+    except:
+        raise HTTPException(400, "Invalid JSON body")
+    
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
     
     if not username or not password:
         raise HTTPException(400, "Username and password required")
@@ -296,7 +285,7 @@ async def health():
     return {"status": "healthy", "service": "flaxtube"}
 
 @app.get("/debug/session")
-async def debug_session(request):
+async asyn def debug_session(request):
     user = get_session(request)
     cookies = request.cookies
     return {
