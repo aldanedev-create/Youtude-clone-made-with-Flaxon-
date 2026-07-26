@@ -29,6 +29,8 @@ document.getElementById('login-form').addEventListener('submit', async function(
     const password = document.getElementById('password').value;
     const status = document.getElementById('auth-status');
     
+    status.innerHTML = '<p style="color: #888;">Logging in...</p>';
+    
     try {
         const response = await fetch('/login', {
             method: 'POST',
@@ -36,11 +38,21 @@ document.getElementById('login-form').addEventListener('submit', async function(
             body: JSON.stringify({ username, password })
         });
         
-        if (response.ok) {
-            window.location.href = '/';
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.location.href = '/';
+            } else {
+                status.innerHTML = `<div class="error">${data.error?.message || 'Login failed'}</div>`;
+            }
         } else {
-            const error = await response.json();
-            status.innerHTML = `<div class="error">${error.error?.message || 'Login failed'}</div>`;
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                status.innerHTML = '<div class="error">Server error. Please try again.</div>';
+            }
         }
     } catch (error) {
         status.innerHTML = `<div class="error">Login failed: ${error.message}</div>`;
