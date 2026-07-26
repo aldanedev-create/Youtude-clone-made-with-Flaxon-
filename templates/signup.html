@@ -39,10 +39,21 @@ document.getElementById('signup-form').addEventListener('submit', async function
     const confirm_password = document.getElementById('confirm_password').value;
     const status = document.getElementById('auth-status');
     
+    // Clear previous status
+    status.innerHTML = '';
+    
+    // Basic validation
     if (password !== confirm_password) {
         status.innerHTML = '<div class="error">Passwords do not match</div>';
         return;
     }
+    
+    if (password.length < 6) {
+        status.innerHTML = '<div class="error">Password must be at least 6 characters</div>';
+        return;
+    }
+    
+    status.innerHTML = '<p style="color: #888;">Creating account...</p>';
     
     try {
         const response = await fetch('/signup', {
@@ -51,12 +62,23 @@ document.getElementById('signup-form').addEventListener('submit', async function
             body: JSON.stringify({ username, email, password, confirm_password })
         });
         
-        if (response.ok) {
-            // Auto-login success, redirect to home
-            window.location.href = '/';
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.location.href = '/';
+            } else {
+                status.innerHTML = `<div class="error">${data.error?.message || 'Sign up failed'}</div>`;
+            }
         } else {
-            const error = await response.json();
-            status.innerHTML = `<div class="error">${error.error?.message || 'Sign up failed'}</div>`;
+            // If not JSON, it's likely a redirect or error page
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                status.innerHTML = '<div class="error">Server error. Please try again.</div>';
+            }
         }
     } catch (error) {
         status.innerHTML = `<div class="error">Sign up failed: ${error.message}</div>`;
