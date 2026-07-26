@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Flaxon Todos</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; color: #222; }
+    h1 { font-size: 1.4rem; }
+    form.add { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    form.add input[type=text] { flex: 1; padding: 0.5rem; font-size: 1rem; }
+    form.add button { padding: 0.5rem 1rem; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; border-bottom: 1px solid #eee; }
+    li form { display: inline; margin: 0; }
+    li .title { flex: 1; }
+    li .done .title { text-decoration: line-through; color: #999; }
+    button.link { background: none; border: none; color: #666; cursor: pointer; padding: 0.2rem 0.4rem; }
+    button.link:hover { color: #000; }
+    .empty { color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Flaxon Todos</h1>
+
+  <form class="add" method="post" action="/todos">
+    <input type="text" name="title" placeholder="What needs doing?" required>
+    <button type="submit">Add</button>
+  </form>
+
+  {% if todos %}
+  <ul>
+    {% for todo in todos %}
+    <li class="{{ 'done' if todo.done else '' }}">
+      <form method="post" action="/todos/{{ todo.id }}/toggle">
+        <button type="submit" class="link">{{ "☑" if todo.done else "☐" }}</button>
+      </form>
+      <span class="title">{{ todo.title }}</span>
+      <form method="post" action="/todos/{{ todo.id }}/delete">
+        <button type="submit" class="link">✕</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">No todos yet — add one above.</p>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Video - FlaxTube{% endblock %}
+
+{% block content %}
+    <div class="upload-container">
+        <h1>Upload Video</h1>
+
+        <form id="upload-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" placeholder="Enter video title" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="4" placeholder="Describe your video"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="video">Video File</label>
+                <input type="file" id="video" name="video" accept="video/*" required>
+                <small>Supported: MP4, WebM (Max 100MB)</small>
+            </div>
+
+            <div id="progress-container" style="display:none;">
+                <div id="progress-bar"></div>
+                <span id="progress-text">0%</span>
+            </div>
+
+            <button type="submit" class="btn-primary">Upload Video</button>
+        </form>
+
+        <div id="upload-status"></div>
+    </div>
+{% endblock %}

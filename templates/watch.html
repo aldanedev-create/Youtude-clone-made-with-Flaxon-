@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ video.title }} - FlaxTube{% endblock %}
+
+{% block content %}
+    <div class="watch-container">
+        <div class="video-player">
+            <video controls autoplay>
+                <source src="/uploads/{{ video.filename }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <div class="video-details">
+            <h1>{{ video.title }}</h1>
+            <div class="meta-bar">
+                <span class="views">{{ video.views }} views</span>
+                <span class="date">{{ video.created_at[:10] }}</span>
+                <span class="author">By: {{ video.author }}</span>
+            </div>
+            <div class="actions">
+                <button class="like-btn" data-video-id="{{ video.id }}" data-liked="false">
+                    ❤️ <span class="like-count">{{ video.likes }}</span>
+                </button>
+            </div>
+            <p class="description">{{ video.description }}</p>
+        </div>
+
+        <div class="comments-section">
+            <h3>Comments ({{ comments|length }})</h3>
+            {% if user %}
+                <div class="comment-form">
+                    <input type="text" id="comment-input" placeholder="Write a comment...">
+                    <button id="comment-btn" data-video-id="{{ video.id }}">Post</button>
+                </div>
+            {% else %}
+                <p><a href="/login">Login</a> to comment</p>
+            {% endif %}
+            <div class="comments-list">
+                {% for comment in comments %}
+                    <div class="comment">
+                        <strong>{{ comment.username }}</strong>
+                        <span class="comment-date">{{ comment.created_at }}</span>
+                        <p>{{ comment.text }}</p>
+                    </div>
+                {% else %}
+                    <p class="no-comments">No comments yet. Be the first!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

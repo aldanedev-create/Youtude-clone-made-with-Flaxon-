@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}FlaxTube - Home{% endblock %}
+
+{% block content %}
+    <div class="video-grid">
+        {% if videos %}
+            {% for video in videos %}
+                <div class="video-card" onclick="location.href='/watch/{{ video.id }}'">
+                    <div class="thumbnail">
+                        <div class="play-icon">▶</div>
+                    </div>
+                    <div class="video-info">
+                        <h3>{{ video.title }}</h3>
+                        <p class="meta">{{ video.views }} views • {{ video.created_at[:10] }}</p>
+                        <p class="meta">By: {{ video.author }}</p>
+                        <p class="description">{{ video.description[:60] }}{% if video.description|length > 60 %}...{% endif %}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <h2>No videos yet</h2>
+                <p>Be the first to upload!</p>
+                <a href="/upload" class="btn-primary">Upload Now</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
