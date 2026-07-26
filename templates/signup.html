@@ -1,3 +1,4 @@
+<!-- templates/signup.html -->
 {% extends "base.html" %}
 
 {% block title %}Sign Up - FlaxTube{% endblock %}
@@ -31,11 +32,14 @@
 <script>
 document.getElementById('signup-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
+    
+    const username = document.getElementById('username').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const confirm_password = document.getElementById('confirm_password').value;
     const status = document.getElementById('auth-status');
     
-    if (data.password !== data.confirm_password) {
+    if (password !== confirm_password) {
         status.innerHTML = '<div class="error">Passwords do not match</div>';
         return;
     }
@@ -44,17 +48,18 @@ document.getElementById('signup-form').addEventListener('submit', async function
         const response = await fetch('/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ username, email, password, confirm_password })
         });
         
         if (response.ok) {
-            window.location.href = '/login';
+            // Auto-login success, redirect to home
+            window.location.href = '/';
         } else {
             const error = await response.json();
             status.innerHTML = `<div class="error">${error.error?.message || 'Sign up failed'}</div>`;
         }
     } catch (error) {
-        status.innerHTML = `<div class="error">Sign up failed</div>`;
+        status.innerHTML = `<div class="error">Sign up failed: ${error.message}</div>`;
     }
 });
 </script>
