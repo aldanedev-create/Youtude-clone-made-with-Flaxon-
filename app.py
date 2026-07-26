@@ -285,7 +285,7 @@ async def health():
     return {"status": "healthy", "service": "flaxtube"}
 
 @app.get("/debug/session")
-async asyn def debug_session(request):
+async def debug_session(request):
     user = get_session(request)
     cookies = request.cookies
     return {
