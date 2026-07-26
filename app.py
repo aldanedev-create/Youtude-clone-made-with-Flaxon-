@@ -1,21 +1,23 @@
 # app.py
 from pathlib import Path
 from datetime import datetime
+import os
 from flaxon import Flaxon, HTTPException, Response
 from flaxon.jinax import Jinax
 from flaxon.validation import Schema
 from flaxon.validation.fields import StrField
 from flaxon.files import FileUpload, FileStorage
 from flaxon.middleware import CORSMiddleware
-import database as db
+import database as db  # db.init_all() runs automatically on import
 
-app = Flaxon("youtube-clone", debug=True)
+app = Flaxon("youtube-clone", debug=False)
 
 app.add_middleware(CORSMiddleware, allowed_origins=["*"])
+app.use_templates(Jinax("templates", auto_reload=False))
 
-app.use_templates(Jinax("templates", auto_reload=True))
-
-storage = FileStorage("videos")
+# Use disk mount for videos on Render
+videos_path = os.environ.get("VIDEOS_PATH", "videos")
+storage = FileStorage(videos_path)
 upload_handler = FileUpload(max_size=100 * 1024 * 1024)
 
 sessions = {}
@@ -28,10 +30,6 @@ class SignupSchema(Schema):
 class LoginSchema(Schema):
     username = StrField(required=True)
     password = StrField(required=True)
-
-class VideoUpload(Schema):
-    title = StrField(required=True, min_length=2, max_length=100)
-    description = StrField(required=False, max_length=500)
 
 class CommentCreate(Schema):
     text = StrField(required=True, min_length=1, max_length=500)
@@ -192,22 +190,21 @@ async def serve_static(file_path: str):
         content_type = "text/css"
     elif ext == ".js":
         content_type = "application/javascript"
-    elif ext == ".png":
-        content_type = "image/png"
-    elif ext == ".jpg" or ext == ".jpeg":
-        content_type = "image/jpeg"
     
     return Response(path.read_bytes(), media_type=content_type)
 
 @app.get("/uploads/<path:file_path>")
 async def serve_video(file_path: str):
-    path = Path("videos") / file_path
+    path = Path(videos_path) / file_path
     if not path.exists():
         raise HTTPException(404, "File not found")
     
-    ext = path.suffix.lower()
-    content_type = "video/mp4"
-    if ext == ".webm":
-        content_type = "video/webm"
-    
-    return Response(path.read_bytes(), media_type=content_type)
+    return Response(path.read_bytes(), media_type="video/mp4")
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
