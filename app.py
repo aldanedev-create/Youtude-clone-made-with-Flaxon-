@@ -1,4 +1,3 @@
-# app.py
 from pathlib import Path
 from datetime import datetime
 import os
@@ -44,11 +43,11 @@ def get_session(request):
 def set_session(response, user_id):
     session_id = secrets.token_hex(32)
     sessions[session_id] = user_id
-    response.headers["set-cookie"] = f"session_id={session_id}; Path=/; HttpOnly; Max-Age=604800"
+    response.headers["Set-Cookie"] = f"session_id={session_id}; Path=/; HttpOnly; Max-Age=604800; SameSite=Lax"
     return session_id
 
 def clear_session(response):
-    response.headers["set-cookie"] = "session_id=; Path=/; HttpOnly; Max-Age=0"
+    response.headers["Set-Cookie"] = "session_id=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax"
 
 # ============================================================
 # Validation Schemas
@@ -184,7 +183,7 @@ async def list_videos():
 async def signup(request):
     try:
         data = await request.json()
-    except:
+    except Exception:
         raise HTTPException(400, "Invalid JSON body")
     
     username = data.get("username", "").strip()
@@ -220,7 +219,7 @@ async def signup(request):
 async def login(request):
     try:
         data = await request.json()
-    except:
+    except Exception:
         raise HTTPException(400, "Invalid JSON body")
     
     username = data.get("username", "").strip()
@@ -244,37 +243,39 @@ async def login(request):
 
 @app.get("/static/<path:file_path>")
 async def serve_static(file_path: str):
-    path = Path("static") / file_path
-    if not path.exists():
+    base_dir = Path("static").resolve()
+    target_file = (base_dir / file_path).resolve()
+    
+    # Prevent path traversal security vulnerabilities
+    if not target_file.is_relative_to(base_dir) or not target_file.exists():
         raise HTTPException(404, "File not found")
     
-    ext = path.suffix.lower()
-    content_type = "text/plain"
-    if ext == ".css":
-        content_type = "text/css"
-    elif ext == ".js":
-        content_type = "application/javascript"
-    elif ext == ".png":
-        content_type = "image/png"
-    elif ext == ".jpg" or ext == ".jpeg":
-        content_type = "image/jpeg"
-    elif ext == ".ico":
-        content_type = "image/x-icon"
+    ext = target_file.suffix.lower()
+    content_types = {
+        ".css": "text/css",
+        ".js": "application/javascript",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".ico": "image/x-icon"
+    }
+    content_type = content_types.get(ext, "text/plain")
     
-    return Response(path.read_bytes(), media_type=content_type)
+    return Response(target_file.read_bytes(), media_type=content_type)
 
 @app.get("/uploads/<path:file_path>")
 async def serve_video(file_path: str):
-    path = Path(videos_path) / file_path
-    if not path.exists():
+    base_dir = Path(videos_path).resolve()
+    target_file = (base_dir / file_path).resolve()
+    
+    # Prevent path traversal security vulnerabilities
+    if not target_file.is_relative_to(base_dir) or not target_file.exists():
         raise HTTPException(404, "File not found")
     
-    ext = path.suffix.lower()
-    content_type = "video/mp4"
-    if ext == ".webm":
-        content_type = "video/webm"
+    ext = target_file.suffix.lower()
+    content_type = "video/webm" if ext == ".webm" else "video/mp4"
     
-    return Response(path.read_bytes(), media_type=content_type)
+    return Response(target_file.read_bytes(), media_type=content_type)
 
 # ============================================================
 # Routes - Health Check
